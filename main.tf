@@ -1,13 +1,23 @@
 terraform {
-  required_providers {
-    aws = {
-      source = "hashicorp/aws"
+/*
+  cloud {
+    organization = "policy-as-code-training"
+    workspaces {
+      name = "tf-vault-qa-{your-initials}"
     }
   }
+*/
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.28.0"
+    }
+  }
+  required_version = ">= 0.14.0"
 }
 
 provider "aws" {
-  region  = "us-west-1"
+  region  = var.aws_region
 }
 
 data "aws_availability_zones" "available" {
@@ -21,9 +31,8 @@ module "vpc" {
   cidr = "10.0.0.0/16"
 
   azs             = data.aws_availability_zones.available.names
-  private_subnets = ["10.0.101.0/24", "10.0.102.0/24"]
-  public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
-
+  private_subnets = slice(var.private_subnet_cidr_blocks, 0, var.private_subnet_count)
+  public_subnets  = slice(var.public_subnet_cidr_blocks, 0, var.public_subnet_count)
   enable_nat_gateway = true
   enable_vpn_gateway = false
 
@@ -37,7 +46,7 @@ module "app_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
   version = "3.17.0"
 
-  name        = "web-sg-project-alpha-dev"
+  name        =  "web-sg-${var.resource_tags["project"]}-${var.resource_tags["environment"]}"
   description = "Security group for web-servers with HTTP ports open within VPC"
   vpc_id      = module.vpc.vpc_id
 
@@ -53,7 +62,7 @@ module "lb_security_group" {
   source  = "terraform-aws-modules/security-group/aws//modules/web"
   version = "3.17.0"
 
-  name        = "lb-sg-project-alpha-dev"
+  name        = "lb-sg-${var.resource_tags["project"]}-${var.resource_tags["environment"]}"
   description = "Security group for load balancer with HTTP ports open within VPC"
   vpc_id      = module.vpc.vpc_id
 
@@ -75,7 +84,8 @@ module "elb_http" {
   version = "2.4.0"
 
   # Ensure load balancer name is unique
-  name = "lb-${random_string.lb_id.result}-project-alpha-dev"
+  name = "lb-${random_string.lb_id.result}-${var.resource_tags["project"]}-${var.resource_tags["environment"]}"
+
 
   internal = false
 
@@ -100,12 +110,8 @@ module "elb_http" {
     timeout             = 5
   }
 
-  tags = {
-    project     = "project-alpha",
-    environment = "dev"
-  }
+  tags = var.resource_tags
 }
-
 module "ec2_instances" {
   source = "./modules/aws-instance"
 
@@ -119,3 +125,4 @@ module "ec2_instances" {
     environment = "dev"
   }
 }
+
