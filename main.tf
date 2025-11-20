@@ -130,4 +130,5 @@ module "s3-bucket-cd" {
   source  = "app.terraform.io/policy-as-code-training/s3-bucket-cd/aws"
   version = "1.0.0"
   # insert required variables here
+  bucket_name = "s3-bucket-cd"
 }
