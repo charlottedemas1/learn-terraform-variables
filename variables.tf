@@ -93,3 +93,9 @@ variable vpc_cidr_block{
 #     condition     = length(var.resource_tags["environment"]) <= 8 && length(regexall("/[^a-zA-Z0-9-]/", var.resource_tags["environment"])) == 0
 #     error_message = "The environment tag must be no more than 8 characters, and only contain letters, numbers, and hyphens."
 #   }
+
+module "s3-bucket-cd" {
+  source  = "app.terraform.io/policy-as-code-training/s3-bucket-cd/aws"
+  version = "1.0.0"
+  # insert required variables here
+}
